@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HALO OS — Guide · How this was built</title>
+<meta name="description" content="How the HALO OS mission-control HUD was built with Formwork: an SVG + canvas heads-up display — a projected orbit diagram, rotating dial rings, a radar sweep, and telemetry that ticks on a timer." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --accent:#4de8ff;--amber:#ffb020;
+    --bg:#04070d;--panel:#080e18;--ink:#dcecf3;--dim:#7a94a3;--faint:#47606f;
+    --line:rgba(77,232,255,.14);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:"Chakra Petch",system-ui,sans-serif;
+    font-weight:400;line-height:1.62;-webkit-font-smoothing:antialiased}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:linear-gradient(rgba(77,232,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(77,232,255,.04) 1px,transparent 1px);
+    background-size:46px 46px;mask-image:radial-gradient(circle at 50% 0%,#000,transparent 80%);
+    -webkit-mask-image:radial-gradient(circle at 50% 0%,#000,transparent 80%)}
+  a{color:var(--accent);text-decoration:none}a:hover{text-shadow:0 0 10px rgba(77,232,255,.5)}
+  .wrap{position:relative;z-index:1;max-width:770px;margin:0 auto;padding:clamp(28px,6vw,84px) clamp(20px,5vw,32px)}
+  .top{display:flex;justify-content:space-between;align-items:center;font-family:"JetBrains Mono",monospace;
+    font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:clamp(40px,8vh,88px)}
+  .top a{color:var(--dim)}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:700;letter-spacing:.16em;color:var(--ink);font-family:"Chakra Petch",sans-serif}
+  .brand b{color:var(--accent)}
+  .tag{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:.72rem;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--accent);margin-bottom:1.3rem}
+  h1{font-family:"Chakra Petch",sans-serif;font-weight:700;font-size:clamp(2.4rem,7vw,4rem);line-height:1;
+    letter-spacing:-.01em;margin-bottom:1.1rem}
+  h1 em{font-style:normal;color:transparent;-webkit-text-stroke:1.4px var(--accent);text-shadow:0 0 24px rgba(77,232,255,.4)}
+  .lede{font-size:clamp(1.05rem,2.1vw,1.3rem);color:var(--dim);max-width:58ch;margin-bottom:3.2rem}
+  h2{font-family:"Chakra Petch",sans-serif;font-weight:600;font-size:clamp(1.5rem,3.6vw,2.2rem);
+    letter-spacing:.005em;margin:2.8rem 0 1rem}
+  p{color:var(--dim);margin:0 0 1.05rem;max-width:64ch}
+  strong{color:var(--ink);font-weight:600}
+  ul{color:var(--dim);margin:0 0 1.15rem 1.15rem}li{margin:.4rem 0}
+  code{font-family:"JetBrains Mono",monospace;font-size:.85em;background:rgba(77,232,255,.08);
+    padding:.12em .4em;border-radius:3px;color:var(--ink)}
+  pre{background:#070c14;border:1px solid var(--line);border-radius:8px;padding:18px 20px;overflow-x:auto;
+    margin:0 0 1.4rem;font-size:.8rem;line-height:1.6;font-family:"JetBrains Mono",monospace}
+  pre code{background:none;padding:0;color:var(--dim)}
+  pre .k{color:var(--accent)}pre .c{color:var(--faint)}
+  .stack{list-style:none;margin:0 0 1.2rem;padding:0}
+  .stack li{display:flex;gap:14px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .stack b{color:var(--ink);font-weight:600;min-width:118px;font-family:"JetBrains Mono",monospace;font-size:.82rem;letter-spacing:.04em}
+  .rule{height:1px;background:var(--line);margin:2.8rem 0}
+  footer{margin-top:3.4rem;padding-top:1.8rem;border-top:1px solid var(--line);
+    font-family:"JetBrains Mono",monospace;font-size:.76rem;color:var(--faint)}
+  footer b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="brand" href="../">◍ HALO<b>OS</b></a>
+    <a href="../">← Back to site</a>
+  </div>
+  <span class="tag">Build guide · Site 18 of 25</span>
+  <h1>A cockpit made of <em>light and timers</em>.</h1>
+  <p class="lede">HALO OS is one of 25 sites built by Formwork. The centerpiece is a live spacecraft HUD:
+    a planet, a craft on an inclined orbit, dial rings, a radar sweep, and telemetry that never
+    stops moving — all drawn in the browser, no images, no libraries.</p>
+
+  <h2>The idea</h2>
+  <p>Mission-control software has a particular calm to it: dense, exact, glowing, and completely
+    unbothered. I wanted a page that felt like sitting at that console — where the interface is
+    the hero and the copy just labels it. Everything is phosphor <strong>cyan on near-black</strong>,
+    with <strong>amber</strong> reserved for the one thing that wants your attention. Nothing shouts.</p>
+
+  <h2>The stack</h2>
+  <ul class="stack">
+    <li><b>Render</b> Plain <code>&lt;canvas&gt;</code> 2D + an inline <code>&lt;svg&gt;</code> reticle overlay. No WebGL, no framework.</li>
+    <li><b>Motion</b> A single <code>requestAnimationFrame</code> loop drives every canvas; <code>setInterval</code> ticks the readouts.</li>
+    <li><b>Type</b> Chakra Petch (display) + JetBrains Mono (all telemetry &amp; labels).</li>
+    <li><b>Data</b> Deterministic — layered sine waves, so numbers wander plausibly and never error.</li>
+    <li><b>Host</b> Static files on GitHub Pages.</li>
+  </ul>
+
+  <h2>Signature technique: a projected orbit</h2>
+  <p>The orbit is an ellipse in a 2-D plane that gets <strong>rotated into the page</strong> by a slowly
+    precessing tilt. One <code>project()</code> helper places both the orbit path and the craft, so they
+    can never drift out of sync. The craft's angle is just time:</p>
+  <pre><code><span class="c">// tilt precesses slowly; one projector for path + craft</span>
+<span class="k">const</span> prec = TILT + t * 0.02, cosP = Math.cos(prec), sinP = Math.sin(prec);
+<span class="k">const</span> project = (lx, ly) =&gt; [
+  cx + lx*cosP - ly*sinP,
+  cy + lx*sinP + ly*cosP
+];
+<span class="c">// craft rides the ellipse; amber pulse near a node</span>
+<span class="k">const</span> cA = t * 0.35;
+<span class="k">const</span> [qx, qy] = project(a*Math.cos(cA), b*Math.sin(cA));</code></pre>
+  <p>Glow is cheap here: a radial gradient for the planet body, and a short-lived <code>shadowBlur</code>
+    only on the handful of bright marks (the limb, the craft, the radar's leading edge). The radar sweep
+    is <strong>sixteen thin wedges</strong> with falling alpha — an angular fade a gradient can't do — and the
+    contacts light up as the beam passes, then decay over a third of a revolution.</p>
+
+  <h2>Details that matter</h2>
+  <ul>
+    <li><strong>Never blank</strong> — the hero reveals via a <code>.loaded</code> class on a double-rAF plus a 400 ms failsafe.</li>
+    <li><strong>Reduced motion</strong> — one static frame at a nice phase, timers off, everything forced visible.</li>
+    <li><strong>Deterministic drift</strong> — <code>base + amp·sin()</code> keeps altitude, ΔV and O₂ believable without random spikes.</li>
+    <li><strong>Performance</strong> — <code>devicePixelRatio</code> capped at 1.5; one loop for the HUD, the data-stream and four gauges.</li>
+  </ul>
+
+  <h2>Ship it on GitHub Pages</h2>
+  <pre><code>git init -b main &amp;&amp; git add -A &amp;&amp; git commit -m "ship halo os"
+gh repo create formwork-halo --public --source=. --push
+gh api --method POST /repos/OWNER/formwork-halo/pages \
+  -f 'source[branch]=main' -f 'source[path]=/'</code></pre>
+  <p>No build step and no dependencies — just three static files and a canvas. Keep every path relative
+    and drop in a <code>.nojekyll</code> so Pages serves it untouched.</p>
+
+  <div class="rule"></div>
+  <p>A little trigonometry, one projector, and a loop that never quite settles — and the void has a dashboard.</p>
+  <footer>Designed &amp; built by <b>Formwork</b> · Part of a 25-site showcase · <a href="../">Return to HALO OS →</a></footer>
+</div>
+</body>
+</html>

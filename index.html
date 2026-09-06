@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script>document.documentElement.classList.add('js')</script>
+<title>HALO OS — flight software for the long dark</title>
+<meta name="description" content="HALO OS is a fictional spacecraft operating system rendered as a live mission-control HUD — a rotating orbit diagram, sweeping radar, dial rings and ticking telemetry, all glowing cyan in the dark." />
+<meta name="theme-color" content="#04070d" />
+<meta property="og:title" content="HALO OS — flight software for the long dark" />
+<meta property="og:description" content="A live spacecraft mission-control interface. Orbit diagram, radar sweep, dial rings, and telemetry that never stops ticking." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<div class="bg-grid" aria-hidden="true"></div>
+<div class="bg-scan" aria-hidden="true"></div>
+<div class="bg-vignette" aria-hidden="true"></div>
+
+<header class="nav">
+  <a class="brand" href="./" aria-label="HALO OS home">
+    <span class="brand-mark" aria-hidden="true">◍</span>
+    <span class="brand-txt">HALO<b>OS</b></span>
+  </a>
+  <nav class="nav-links" aria-label="Primary">
+    <a href="#subsystems">Subsystems</a>
+    <a href="#log">Mission&nbsp;Log</a>
+    <a href="./guide/">Guide</a>
+  </nav>
+  <div class="nav-clock" aria-hidden="true">
+    <span class="clk-utc" id="utc">00:00:00Z</span>
+    <span class="clk-sep">·</span>
+    <span class="clk-phase">ORBIT · LEO</span>
+  </div>
+</header>
+
+<main>
+  <!-- ============ HERO / LIVE HUD ============ -->
+  <section class="hero" aria-labelledby="halo-title">
+    <div class="hero-inner">
+
+      <div class="console-top">
+        <span class="ct-id">VEHICLE&nbsp;HALO-7 · <i>ATHENA</i></span>
+        <span class="ct-build">flight&nbsp;sw&nbsp;4.18.0-orbital</span>
+        <span class="ct-status" role="status"><i class="pulse" aria-hidden="true"></i>ALL&nbsp;SYSTEMS&nbsp;NOMINAL</span>
+      </div>
+
+      <div class="hero-grid">
+        <!-- left: identity -->
+        <div class="hero-lead">
+          <p class="eyebrow">Mission Control · Deep-Space Suite</p>
+          <h1 class="wordmark" id="halo-title"><span class="w1">HALO</span><span class="w2">OS</span></h1>
+          <p class="tagline">flight software for the long dark</p>
+          <p class="lede">A single pane of glass between the crew and the void — attitude, propulsion,
+            life support and comms, held steady and readable while the vehicle falls forever around the world.</p>
+          <div class="hero-cta">
+            <a class="btn btn-primary" href="#subsystems">Open subsystems</a>
+            <a class="btn btn-ghost" href="./guide/">How it's built</a>
+          </div>
+          <dl class="lead-vitals" aria-hidden="true">
+            <div><dt>Attitude</dt><dd id="m-att">+00.0°</dd></div>
+            <div><dt>Power</dt><dd id="m-pwr">00.0 kW</dd></div>
+            <div><dt>Signal</dt><dd id="m-sig">00 dB</dd></div>
+          </dl>
+        </div>
+
+        <!-- center: the animated HUD -->
+        <div class="stage-wrap">
+          <div class="stage" role="img" aria-label="Animated mission HUD: a planet with a spacecraft on an inclined orbit, rotating dial rings, a sweeping radar arc and a small starfield.">
+            <canvas id="hud" class="hud-canvas" aria-hidden="true"></canvas>
+            <svg class="hud-frame" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+              <!-- corner brackets -->
+              <g class="hf-corners" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M40 96 V40 H96" /><path d="M904 40 H960 V96" />
+                <path d="M960 904 V960 H904" /><path d="M96 960 H40 V904" />
+              </g>
+              <!-- fine crosshair -->
+              <g class="hf-cross" stroke="currentColor" stroke-width="1">
+                <line x1="500" y1="60" x2="500" y2="188" />
+                <line x1="500" y1="812" x2="500" y2="940" />
+                <line x1="60" y1="500" x2="188" y2="500" />
+                <line x1="812" y1="500" x2="940" y2="500" />
+              </g>
+              <!-- center reticle -->
+              <g class="hf-ret" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="470" y="470" width="60" height="60" />
+                <line x1="500" y1="455" x2="500" y2="470" />
+                <line x1="500" y1="530" x2="500" y2="545" />
+                <line x1="455" y1="500" x2="470" y2="500" />
+                <line x1="530" y1="500" x2="545" y2="500" />
+              </g>
+              <text class="hf-t hf-t-top" x="500" y="86" text-anchor="middle">ORBITAL TRACK · LEO 412 KM</text>
+              <text class="hf-t hf-t-bl" x="52" y="516">AZ</text>
+              <text class="hf-t hf-t-br" x="948" y="516" text-anchor="end">EL</text>
+              <text class="hf-t hf-t-bot" x="500" y="928" text-anchor="middle">SWEEP 360° · 6.0 RPM</text>
+            </svg>
+            <div class="stage-tag stage-tag-craft"><i></i>ATHENA · V<b id="tag-vel">7.66</b></div>
+            <div class="stage-tag stage-tag-lock" id="lockTag"><i></i>TRACK LOCK</div>
+          </div>
+        </div>
+
+        <!-- right: primary telemetry + data stream -->
+        <div class="tele-col" aria-hidden="true">
+          <div class="tele" data-metric="alt">
+            <span class="tele-label">Altitude</span>
+            <span class="tele-value"><b id="m-alt">412.6</b><i>km</i></span>
+            <span class="tele-bar"><span class="tele-fill" id="bar-alt"></span></span>
+          </div>
+          <div class="tele" data-metric="vel">
+            <span class="tele-label">Velocity</span>
+            <span class="tele-value"><b id="m-vel">7.662</b><i>km/s</i></span>
+            <span class="tele-bar"><span class="tele-fill" id="bar-vel"></span></span>
+          </div>
+          <div class="tele" data-metric="o2">
+            <span class="tele-label">O₂ Partial</span>
+            <span class="tele-value"><b id="m-o2">98.4</b><i>%</i></span>
+            <span class="tele-bar"><span class="tele-fill" id="bar-o2"></span></span>
+          </div>
+          <div class="tele" data-metric="dv">
+            <span class="tele-label">ΔV Budget</span>
+            <span class="tele-value"><b id="m-dv">1240</b><i>m/s</i></span>
+            <span class="tele-bar"><span class="tele-fill" id="bar-dv"></span></span>
+          </div>
+          <div class="tele tele-stream">
+            <span class="tele-label">Downlink · <b class="ds-rate" id="m-rate">8.4</b> Gbps</span>
+            <canvas id="stream" class="stream-canvas"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <a class="scroll-cue" href="#subsystems" aria-label="Scroll to subsystems"><span></span>SCROLL</a>
+  </section>
+
+  <!-- ============ SUBSYSTEMS ============ -->
+  <section id="subsystems" class="subsystems">
+    <div class="sec-head">
+      <p class="kicker reveal">[ 01 · SUBSYSTEMS ]</p>
+      <h2 class="reveal">Four systems, one pane of glass.</h2>
+      <p class="sec-note reveal">Every board reports the same way — a gauge, a state, and the two numbers
+        that matter. Green is nominal. Amber wants your attention before it becomes a problem.</p>
+    </div>
+    <div class="sub-grid">
+      <article class="sub reveal" data-sys="nav" data-state="ok">
+        <header class="sub-head">
+          <span class="sub-idx">S-01</span>
+          <span class="sub-name">Navigation</span>
+          <span class="sub-state">NOMINAL</span>
+        </header>
+        <canvas class="gauge" aria-hidden="true"></canvas>
+        <p class="sub-desc">Star-tracker fix converged. Ephemeris propagating on schedule; next state vector uplink in 04:11.</p>
+        <dl class="sub-specs">
+          <div><dt>Fix error</dt><dd><span data-read="nav-a">0.004°</span></dd></div>
+          <div><dt>Drift</dt><dd><span data-read="nav-b">0.9 arcs/hr</span></dd></div>
+        </dl>
+      </article>
+
+      <article class="sub reveal" data-sys="life" data-state="ok">
+        <header class="sub-head">
+          <span class="sub-idx">S-02</span>
+          <span class="sub-name">Life Support</span>
+          <span class="sub-state">NOMINAL</span>
+        </header>
+        <canvas class="gauge" aria-hidden="true"></canvas>
+        <p class="sub-desc">Cabin loop stable. Scrubbers cycling CO₂ within band; humidity condensate returning to reserve.</p>
+        <dl class="sub-specs">
+          <div><dt>Cabin</dt><dd><span data-read="life-a">1013 hPa</span></dd></div>
+          <div><dt>CO₂</dt><dd><span data-read="life-b">2.1 mmHg</span></dd></div>
+        </dl>
+      </article>
+
+      <article class="sub reveal" data-sys="prop" data-state="warn">
+        <header class="sub-head">
+          <span class="sub-idx">S-03</span>
+          <span class="sub-name">Propulsion</span>
+          <span class="sub-state">STANDBY</span>
+        </header>
+        <canvas class="gauge" aria-hidden="true"></canvas>
+        <p class="sub-desc">Main engine safed. Tank pressure trending low on the oxidizer side — flagged for review before the next burn window.</p>
+        <dl class="sub-specs">
+          <div><dt>Chamber</dt><dd><span data-read="prop-a">0.0 bar</span></dd></div>
+          <div><dt>Ox tank</dt><dd><span data-read="prop-b">18.4 bar</span></dd></div>
+        </dl>
+      </article>
+
+      <article class="sub reveal" data-sys="comm" data-state="ok">
+        <header class="sub-head">
+          <span class="sub-idx">S-04</span>
+          <span class="sub-name">Comms</span>
+          <span class="sub-state">LOCKED</span>
+        </header>
+        <canvas class="gauge" aria-hidden="true"></canvas>
+        <p class="sub-desc">High-gain antenna tracking Canberra. Downlink locked, forward link acknowledged, round-trip 1.28 s.</p>
+        <dl class="sub-specs">
+          <div><dt>Eb/N0</dt><dd><span data-read="comm-a">12.4 dB</span></dd></div>
+          <div><dt>Rate</dt><dd><span data-read="comm-b">8.4 Gbps</span></dd></div>
+        </dl>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ MISSION LOG ============ -->
+  <section id="log" class="logsec">
+    <div class="sec-head">
+      <p class="kicker reveal">[ 02 · MISSION LOG ]</p>
+      <h2 class="reveal">Everything the vehicle has to say.</h2>
+      <p class="sec-note reveal">A single append-only stream, stamped in mission-elapsed time. The newest event
+        is always on top. Nothing is ever quietly overwritten.</p>
+    </div>
+    <div class="terminal reveal">
+      <div class="term-bar" aria-hidden="true">
+        <span class="tb-dot"></span><span class="tb-dot"></span><span class="tb-dot"></span>
+        <p class="tb-title">tty · halo-os / mission.log</p>
+        <p class="tb-clock">T+ <span id="met">041:12:07</span></p>
+      </div>
+      <ol class="log-list" id="logList" aria-live="off"></ol>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="foot-inner">
+    <div class="foot-brand">
+      <span class="brand-mark" aria-hidden="true">◍</span>
+      <span>HALO<b>OS</b></span>
+    </div>
+    <p class="foot-line">Flight software for the long dark. A fictional mission-control interface, built as a
+      showcase piece — every number is synthetic, every subsystem imaginary.</p>
+    <div class="foot-meta">
+      <span>© 2026 · HALO Flight Systems</span>
+      <span>Designed &amp; built by <b>Formwork</b> · <a href="./guide/">How this was built →</a></span>
+    </div>
+  </div>
+</footer>
+
+<script src="./main.js"></script>
+</body>
+</html>
